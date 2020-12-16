@@ -1,0 +1,60 @@
+---
+title: "Introduction to StatComp20021"
+author: "Chi Sun"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to StatComp20021}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview
+
+__StatComp20021__ is a simple R package developed to verify the theorem that the empirical log likelihood of the mean of independent random two-dimension vectors with common distribution converges to the chi-square distribution with 2 degree.
+The method which supports the independence of the sample is realized by bootstrap.And the comparison will be shown in qqplot.
+
+
+## calculate the empirical log likelihood of the mean of the original two-dimensional sample using R.
+The first step is to design an algorithm to calculate the empirical log likelihood of the mean in the original two-dimensional sample using R.According to the book,Empirical Likelihood by Art B.Owen,there is an easier method to simplify the complex formula for calculating the empirical log likelihood of the mean.The R code for the trick is as follows.
+```{r,eval=FALSE}
+f <- function(x,y,xbar,ybar) {
+  m1<-matrix(c(var(x),cov(x,y),cov(x,y),var(y)),2,2)
+  m2<-matrix(c(mean(x)-xbar,mean(y)-xbar),2,1)
+  m<-t(m2)%*%ginv(m1)%*%m2
+  return(m)
+}
+```
+In the above R code,parameter x,y respectively means the components of the bootstap two-dimension samples.Parameter xbar,ybar means the mean of the original sample.In general,m1 is a matrix with full ranks,hence the result degree of the convergent chi-square distribution is equivalent to the dimensions and "solve" function is enough for use. 
+
+## qqplot for comparison and vertification
+The qqplot is a very useful and efficient tool for comparison and vertification in R.After obtaining the empirical log likelihood values of the mean in the original two-dimensional sample by bootstrap method,it is natural to compare them with the random numbers produced by "rchisq".Here is an example.
+```{r,eval=TRUE}
+library(MASS)
+f <- function(x,y,xbar,ybar) {
+  m1<-matrix(c(var(x),cov(x,y),cov(x,y),var(y)),2,2)
+  m2<-matrix(c(mean(x)-xbar,mean(y)-xbar),2,1)
+  m<-t(m2)%*%ginv(m1)%*%m2
+  return(m)
+}
+dqqplot<-function(data,B){
+  n<-nrow(data)
+  m<-as.matrix(data)
+  xbar<-mean(m[,1]);ybar<-mean(m[,2])
+  y<- numeric(B)
+  set.seed(123)
+  for (b in 1:B){
+    i <- sample(1:n, size = n, replace = TRUE)
+    xb<-m[i,1];yb<-m[i,2]
+    y[b]<-n*f(xb,yb,xbar,ybar)
+  }
+  x<-rchisq(B,2)
+  qqplot(x,y)
+  abline(0,1,col=2)
+}
+data<-matrix(c(7,13,14,6,14,1,4,8,7,3,14,5,10,11,6,15,13,5,7,14),ncol=2)
+B<-1000
+dqqplot(data,B)
+```
+  
+Shown is a qqplot of 1000 bootstrap resampled values of the empirical log likelihood of the mean of the ducks data in the book,versus chi-square quantiles with 2 degree.The solid reference line is the 45° line.The results show that the points fit the line well. 
